@@ -6,47 +6,55 @@ import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20P
 import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title RWA Token
- * @dev Реализация базового RWA токена с поддержкой Permit (gasless approvals) 
- * и Votes (checkpointing балансов для Governance).
+ * @dev Реализация базового RWA токена с поддержкой Permit, Votes, 
+ * AccessControl и Pausable.
  */
-contract RWAToken is ERC20, ERC20Permit, ERC20Votes, AccessControl {
+contract RWAToken is ERC20, ERC20Permit, ERC20Votes, AccessControl, Pausable {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     constructor(address defaultAdmin)
         ERC20("Real World Asset", "RWA")
         ERC20Permit("Real World Asset")
     {
-        // Назначаем deployer'а главным админом и даем ему право минта (пока для тестов)
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         _grantRole(MINTER_ROLE, defaultAdmin);
+        _grantRole(PAUSER_ROLE, defaultAdmin);
     }
 
     /**
-     * @dev Функция для чеканки новых токенов. Вызвать может только аккаунт с MINTER_ROLE.
-     * В будущем эта роль будет передана смарт-контракту, ответственному за эмиссию.
+     * @dev Останавливает все переводы токенов. Доступно только PAUSER_ROLE.
      */
+    function pause() public onlyRole(PAUSER_ROLE) {
+        _pause();
+    }
+
+    /**
+     * @dev Возобновляет переводы токенов. Доступно только PAUSER_ROLE.
+     */
+    function unpause() public onlyRole(PAUSER_ROLE) {
+        _unpause();
+    }
+
     function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
         _mint(to, amount);
     }
 
-
     /**
-     * @dev Хук, который вызывается при любом перемещении токенов.
-     * Нужен для правильной работы ERC20Votes (создание снапшотов балансов).
+     * @dev Хук переопределен для добавления проверки whenNotPaused.
      */
     function _update(address from, address to, uint256 value)
         internal
         override(ERC20, ERC20Votes)
+        whenNotPaused
     {
         super._update(from, to, value);
     }
 
-    /**
-     * @dev Переопределение nonces для совместной работы ERC20Permit и ERC20Votes.
-     */
     function nonces(address owner)
         public
         view
