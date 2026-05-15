@@ -5,12 +5,11 @@ import {AssetManagerV1} from "./AssetManagerV1.sol";
 
 /**
  * @title Asset Manager V2
- * @dev Пример обновления (V1 -> V2). 
+ * @dev Пример обновления (V1 -> V2).
  * Наследуем V1, чтобы гарантировать сохранение Storage Layout.
  */
 contract AssetManagerV2 is AssetManagerV1 {
-    
-    // V2 Storage 
+    // V2 Storage
     uint256 public platformFee;
 
     /**
@@ -23,7 +22,7 @@ contract AssetManagerV2 is AssetManagerV1 {
     /**
      * @dev Переопределение логики (если нужно изменить старое поведение).
      */
-    function version() pure external returns (string memory) {
+    function version() external pure returns (string memory) {
         return "V2";
     }
 }

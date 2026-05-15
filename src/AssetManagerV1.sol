@@ -26,13 +26,8 @@ contract AssetManagerV1 is Initializable, AccessControlUpgradeable, UUPSUpgradea
      * @dev Функция инициализации (заменяет constructor для прокси).
      * Вызывается только один раз при деплое прокси-контракта.
      */
-    function initialize(
-        address defaultAdmin, 
-        address _rwaToken, 
-        address _kycPassport
-    ) initializer public {
+    function initialize(address defaultAdmin, address _rwaToken, address _kycPassport) public initializer {
         __AccessControl_init();
-
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         _grantRole(UPGRADER_ROLE, defaultAdmin);
@@ -45,12 +40,8 @@ contract AssetManagerV1 is Initializable, AccessControlUpgradeable, UUPSUpgradea
      * @dev Функция, разрешающая обновление контракта.
      * Критически важно: только адреса с ролью UPGRADER_ROLE могут накатить новую версию.
      */
-    function _authorizeUpgrade(address newImplementation)
-        internal
-        onlyRole(UPGRADER_ROLE)
-        override
-    {}
-    
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
+
     /**
      * @dev Пример функции V1: проверка, есть ли у юзера KYC-паспорт.
      */

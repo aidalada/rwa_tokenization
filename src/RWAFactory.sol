@@ -5,7 +5,7 @@ import {RWAToken} from "./RWAToken.sol";
 
 /**
  * @title RWA Factory
- * @dev Фабрика для деплоя новых RWA токенов. 
+ * @dev Фабрика для деплоя новых RWA токенов.
  */
 contract RWAFactory {
     event TokenCreated(address indexed tokenAddress, address indexed admin, bool isCreate2);
@@ -15,7 +15,7 @@ contract RWAFactory {
      */
     function deployWithCreate(address defaultAdmin) external returns (address) {
         RWAToken newToken = new RWAToken(defaultAdmin);
-        
+
         emit TokenCreated(address(newToken), defaultAdmin, false);
         return address(newToken);
     }
@@ -25,7 +25,7 @@ contract RWAFactory {
      */
     function deployWithCreate2(address defaultAdmin, bytes32 salt) external returns (address) {
         RWAToken newToken = new RWAToken{salt: salt}(defaultAdmin);
-        
+
         emit TokenCreated(address(newToken), defaultAdmin, true);
         return address(newToken);
     }
@@ -35,20 +35,13 @@ contract RWAFactory {
      */
     function predictTokenAddress(address defaultAdmin, bytes32 salt) public view returns (address) {
         bytes memory creationCode = type(RWAToken).creationCode;
-        
+
         bytes memory constructorArgs = abi.encode(defaultAdmin);
-        
+
         bytes memory bytecode = abi.encodePacked(creationCode, constructorArgs);
-        
-        bytes32 hash = keccak256(
-            abi.encodePacked(
-                bytes1(0xff),
-                address(this),
-                salt,
-                keccak256(bytecode)
-            )
-        );
-        
+
+        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)));
+
         return address(uint160(uint256(hash)));
     }
 }

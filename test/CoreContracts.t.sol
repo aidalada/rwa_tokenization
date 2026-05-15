@@ -14,7 +14,7 @@ contract CoreContractsTest is Test {
     RWAToken public rwaToken;
     KYCPassport public kycPassport;
     RWAFactory public factory;
-    
+
     AssetManagerV1 public managerV1;
     AssetManagerV2 public managerV2;
     AssetManagerV1 public proxyManager;
@@ -31,16 +31,12 @@ contract CoreContractsTest is Test {
         factory = new RWAFactory();
 
         managerV1 = new AssetManagerV1();
-        
-        bytes memory initData = abi.encodeWithSelector(
-            AssetManagerV1.initialize.selector,
-            admin,
-            address(rwaToken),
-            address(kycPassport)
-        );
+
+        bytes memory initData =
+            abi.encodeWithSelector(AssetManagerV1.initialize.selector, admin, address(rwaToken), address(kycPassport));
 
         ERC1967Proxy proxy = new ERC1967Proxy(address(managerV1), initData);
-        
+
         proxyManager = AssetManagerV1(address(proxy));
 
         vm.stopPrank();
@@ -50,7 +46,7 @@ contract CoreContractsTest is Test {
 
     function test_RWAToken_MintingAndPausing() public {
         vm.startPrank(admin);
-        
+
         rwaToken.mint(alice, 1000 * 1e18);
         assertEq(rwaToken.balanceOf(alice), 1000 * 1e18);
 
@@ -60,13 +56,13 @@ contract CoreContractsTest is Test {
         vm.stopPrank();
 
         vm.prank(alice);
-        vm.expectRevert(); 
+        vm.expectRevert();
         rwaToken.transfer(bob, 100 * 1e18);
     }
 
     function test_KYCPassport_IssueAndSoulbound() public {
         vm.startPrank(admin);
-        
+
         kycPassport.issuePassport(alice);
         assertEq(kycPassport.balanceOf(alice), 1);
 
@@ -81,13 +77,13 @@ contract CoreContractsTest is Test {
 
     function test_Factory_DeployWithCreate2() public {
         bytes32 salt = keccak256(abi.encodePacked("test_salt"));
-        
+
         address predictedAddress = factory.predictTokenAddress(admin, salt);
-        
+
         address deployedAddress = factory.deployWithCreate2(admin, salt);
-        
+
         assertEq(predictedAddress, deployedAddress);
-        
+
         RWAToken newToken = RWAToken(deployedAddress);
         assertEq(newToken.hasRole(newToken.DEFAULT_ADMIN_ROLE(), admin), true);
     }
@@ -133,7 +129,7 @@ contract CoreContractsTest is Test {
     function testFuzz_KYCPassport_OnlyIssuerCanIssue(address randomUser, address target) public {
         vm.assume(randomUser != admin);
         // Защита от минта на нулевой адрес (ERC721 запрещает это)
-        vm.assume(target != address(0)); 
+        vm.assume(target != address(0));
 
         vm.prank(randomUser);
         vm.expectRevert();

@@ -25,7 +25,7 @@ contract KYCPassport is ERC721, AccessControl {
      */
     function issuePassport(address to) public onlyRole(KYC_ISSUER_ROLE) {
         require(balanceOf(to) == 0, "KYCPassport: Address already has a passport");
-        
+
         uint256 tokenId = _nextTokenId++;
         _safeMint(to, tokenId);
     }
@@ -45,28 +45,16 @@ contract KYCPassport is ERC721, AccessControl {
      * @dev Блокируем любые переводы токена, делая его Soulbound (SBT).
      * Разрешены только минт (from == address(0)) и сжигание (to == address(0)).
      */
-    function _update(address to, uint256 tokenId, address auth)
-        internal
-        override
-        returns (address)
-    {
+    function _update(address to, uint256 tokenId, address auth) internal override returns (address) {
         address from = _ownerOf(tokenId);
-        require(
-            from == address(0) || to == address(0),
-            "KYCPassport: Token is Soulbound and non-transferable"
-        );
+        require(from == address(0) || to == address(0), "KYCPassport: Token is Soulbound and non-transferable");
         return super._update(to, tokenId, auth);
     }
 
     /**
      * @dev Переопределение supportsInterface из-за множественного наследования.
      */
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(ERC721, AccessControl)
-        returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 }
