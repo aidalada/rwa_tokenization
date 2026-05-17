@@ -39,7 +39,7 @@ jobs:
 
       - name: Run fork tests
         run: |
-          RPC="${{ secrets.ETH_RPC_URL }}"
+          RPC="${ https://eth.llamarpc.com}"
           if [ -n "$RPC" ]; then
             forge test --match-contract ForkTest --fork-url "$RPC" -vvv
           else
