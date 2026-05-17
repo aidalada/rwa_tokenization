@@ -1,0 +1,23 @@
+#!/bin/sh
+
+echo "🤖 Running pre-commit hooks..."
+
+# 1. Проверяем форматирование кода
+echo "📝 Checking code formatting with forge fmt..."
+forge fmt --check
+if [ $? -ne 0 ]; then
+    echo "❌ Error: Code formatting is inconsistent! Run 'forge fmt' to fix it before committing."
+    exit 1
+fi
+
+# 2. Проверяем локальные юнит и fuzz тесты перед коммитом
+echo "🧪 Running tests with forge test..."
+# Исключаем DeFiTest, чтобы локально не тратить время на фаззинг при каждом мелком коммите
+forge test --no-match-contract DeFiTest
+if [ $? -ne 0 ]; then
+    echo "❌ Error: Some smart contract tests are failing! Fix your code before committing."
+    exit 1
+fi
+
+echo "✅ Pre-commit checks passed successfully. Proceeding with commit."
+exit 0

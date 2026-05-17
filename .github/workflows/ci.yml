@@ -1,0 +1,56 @@
+name: Core DeFi CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  forge-tests:
+    name: Foundry Build, Test & Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Check Code Formatting
+        run: forge fmt --check
+
+      - name: Compile Smart Contracts
+        run: forge build --sizes
+
+      - name: Run Invariant, Fuzz & Unit Tests
+        run: forge test -vvv
+        # Форк-тест автоматически пропустится, так как переменная MAINNET_RPC_URL не задана в CI, 
+        # что предотвратит падение сборки из-за сторонних RPC.
+
+      - name: Generate Gas Report
+        run: forge test --gas-report
+
+      - name: Run Code Coverage
+        run: forge coverage
+
+  security-slither:
+    name: Slither Static Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Run Slither Action
+        uses: crytic/slither-action@v0.4.0
+        with:
+          fail-on: medium
+          slither-args: --exclude-dependencies --solc-remaps "@openzeppelin/=lib/openzeppelin-contracts/"

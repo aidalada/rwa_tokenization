@@ -5,7 +5,9 @@ import {Governor} from "@openzeppelin/contracts/governance/Governor.sol";
 import {GovernorSettings} from "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
 import {GovernorCountingSimple} from "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
 import {GovernorVotes} from "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
-import {GovernorVotesQuorumFraction} from "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
+import {
+    GovernorVotesQuorumFraction
+} from "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
 import {GovernorTimelockControl} from "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
@@ -25,8 +27,8 @@ contract RWAGovernor is
     constructor(
         IVotes _token,
         TimelockController _timelock,
-        uint48 _votingDelay,       // В OZ v5 тип изменен на uint48
-        uint32 _votingPeriod,      // В OZ v5 тип изменен на uint32
+        uint48 _votingDelay, // В OZ v5 тип изменен на uint48
+        uint32 _votingPeriod, // В OZ v5 тип изменен на uint32
         uint256 _proposalThreshold
     )
         Governor("RWAGovernor")
@@ -54,7 +56,12 @@ contract RWAGovernor is
         return super.state(proposalId);
     }
 
-    function proposalNeedsQueuing(uint256 proposalId) public view override(Governor, GovernorTimelockControl) returns (bool) {
+    function proposalNeedsQueuing(uint256 proposalId)
+        public
+        view
+        override(Governor, GovernorTimelockControl)
+        returns (bool)
+    {
         return super.proposalNeedsQueuing(proposalId);
     }
 
@@ -68,7 +75,8 @@ contract RWAGovernor is
         uint256[] memory values,
         bytes[] memory calldatas,
         bytes32 descriptionHash
-    ) internal override(Governor, GovernorTimelockControl) returns (uint48) { // В OZ v5 возвращает uint48
+    ) internal override(Governor, GovernorTimelockControl) returns (uint48) {
+        // В OZ v5 возвращает uint48
         return super._queueOperations(proposalId, targets, values, calldatas, descriptionHash);
     }
 
