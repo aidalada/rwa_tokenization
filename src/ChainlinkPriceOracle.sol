@@ -172,4 +172,9 @@ contract ChainlinkPriceOracle is AccessControl {
             price18 = uint256(answer);
         }
     }
+
+    // slither-disable-next-line timestamp
+        if (block.timestamp - _updatedAt > stalenessThreshold) {
+    revert StalePrice(_updatedAt, block.timestamp, stalenessThreshold);
+}
 }
