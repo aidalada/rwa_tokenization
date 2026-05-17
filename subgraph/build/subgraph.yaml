@@ -1,6 +1,6 @@
 specVersion: 0.0.5
 schema:
-  file: ./schema.graphql
+  file: schema.graphql
 dataSources:
   - kind: ethereum
     name: RWAToken
@@ -19,14 +19,13 @@ dataSources:
         - Approval
       abis:
         - name: RWAToken
-          file: ../out/RWAToken.sol/RWAToken.json
+          file: out/RWAToken.sol/RWAToken.json
       eventHandlers:
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
         - event: Approval(indexed address,indexed address,uint256)
           handler: handleApproval
-      file: ./src/rwa-token.ts
-
+      file: RWAToken/RWAToken.wasm
   - kind: ethereum
     name: KYCPassport
     network: arbitrum-sepolia
@@ -43,8 +42,8 @@ dataSources:
         - KycUpdate
       abis:
         - name: KYCPassport
-          file: ../out/KYCPassport.sol/KYCPassport.json
+          file: out/KYCPassport.sol/KYCPassport.json
       eventHandlers:
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleKYCTransfer
-      file: ./src/kyc-passport.ts
+      file: KYCPassport/KYCPassport.wasm

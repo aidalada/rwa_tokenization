@@ -1,0 +1,37 @@
+query GetUserData($userId: ID!) {
+  account(id: $userId) {
+    hasKYC
+    tokenBalance
+  }
+}
+
+query GetRecentTransfers {
+  transfers(first: 5, orderBy: transactionHash) {
+    from
+    to
+    value
+  }
+}
+
+query GetRecentApprovals {
+  approvals(first: 5, orderBy: value, orderDirection: desc) {
+    owner
+    spender
+    value
+  }
+}
+
+query GetKycHistory {
+  kycUpdates(first: 5, orderBy: blockTimestamp, orderDirection: desc) {
+    account
+    status
+    blockTimestamp
+  }
+}
+
+query GetVerifiedHolders {
+  accounts(where: { hasKYC: true, tokenBalance_gt: "0" }) {
+    id
+    tokenBalance
+  }
+}

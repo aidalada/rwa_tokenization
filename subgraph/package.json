@@ -1,0 +1,16 @@
+{
+  "name": "subgraph",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@graphprotocol/graph-cli": "^0.71.2",
+    "@graphprotocol/graph-ts": "^0.32.0"
+  }
+}
