@@ -111,7 +111,7 @@ contract DeFiTest is Test {
         // Это позволяет пропустить тест локально без ошибок (чтобы обойти баны публичных RPC),
         // но сохранить логику для преподавателя и CI.
         string memory mainnetRPC = vm.envOr("MAINNET_RPC_URL", string(""));
-        
+
         if (bytes(mainnetRPC).length == 0) {
             // Тихо выходим, тест будет считаться пройденным (PASS)
             return;
@@ -122,9 +122,9 @@ contract DeFiTest is Test {
 
         // Реальный адрес Chainlink ETH/USD на Mainnet
         address ethUsdFeed = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
-        
+
         // Читаем данные из реального контракта
-        (, int256 price, , uint256 updatedAt, ) = AggregatorV3Interface(ethUsdFeed).latestRoundData();
+        (, int256 price,, uint256 updatedAt,) = AggregatorV3Interface(ethUsdFeed).latestRoundData();
 
         assertGt(price, 0, "Real Chainlink price should be > 0");
         assertGt(updatedAt, 0, "Real Chainlink feed should have updated timestamp");
