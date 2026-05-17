@@ -1,0 +1,48 @@
+specVersion: 1.0.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: RWAToken
+    network: arbitrum-sepolia
+    source:
+      address: "0x0000000000000000000000000000000000000000" # Заменится после деплоя
+      abi: RWAToken
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Account
+        - Transfer
+      abis:
+        - name: RWAToken
+          file: ../out/RWAToken.sol/RWAToken.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+      file: ./src/rwa-token.ts
+
+  - kind: ethereum
+    name: KYCPassport
+    network: arbitrum-sepolia
+    source:
+      address: "0x0000000000000000000000000000000000000000" # Заменится после деплоя
+      abi: KYCPassport
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Account
+      abis:
+        - name: KYCPassport
+          file: ../out/KYCPassport.sol/KYCPassport.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleKYCTransfer
+      file: ./src/kyc-passport.ts

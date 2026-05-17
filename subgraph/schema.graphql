@@ -1,0 +1,17 @@
+type Account @entity {
+  id: ID! # Выступает адрес кошелька пользователя
+  hasKYC: Boolean! # Действителен ли KYC паспорт
+  tokenBalance: BigInt! # Текущий баланс токенов RWA
+  transfersFrom: [Transfer!]! @derivedFrom(field: "from")
+  transfersTo: [Transfer!]! @derivedFrom(field: "to")
+}
+
+type Transfer @entity(immutable: true) {
+  id: ID! # Хеш транзакции + индекс лога
+  from: Account!
+  to: Account!
+  amount: BigInt!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
