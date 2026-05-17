@@ -130,3 +130,191 @@ The protocol operates under the following trust assumptions and role distributio
 - **Decision:** We chose a Soulbound ERC721 (Non-transferable NFT).
     
 - **Consequences:** Makes the KYC status composable (other DApps can check the NFT balance) and keeps the ERC20 token logic cleaner.
+
+
+# 🏗️ Architecture Document: RWA Tokenization Platform
+
+## 1. Executive Summary
+This document outlines the architectural design, component interactions, storage layouts, and design decisions for the RWA Tokenization Platform. The system is designed to securely tokenize Real World Assets (RWA), provide liquidity via an automated market maker (AMM), and offer yield generation through an ERC-4626 Vault, all governed by a decentralized DAO.
+
+---
+
+## 2. System Context (C4 Level 1)
+The Context diagram illustrates the high-level interactions between the users, our platform, and external systems (Chainlink Oracles).
+
+```mermaid
+graph TD
+    User([Platform User / Investor])
+    Admin([DAO / Token Holders])
+    
+    subgraph RWA Protocol
+        App[RWA Smart Contract Protocol]
+    end
+    
+    Oracle[Chainlink Data Feeds]
+    L2[L2 Blockchain / Arbitrum Sepolia]
+
+    User -->|Deposits, Swaps, Votes| App
+    Admin -->|Proposes Upgrades, Changes Params| App
+    App -->|Reads Price & Reserves| Oracle
+    App -->|Deployed on| L2
+```
+
+
+## 3. Container & Component Diagram (C4 Level 2)
+This diagram details the internal smart contract architecture, showing how the Factory deploys components, how the UUPS Proxy routes logic, and how the DeFi primitives interact.
+
+```mermaid
+graph TD
+    subgraph Core
+        Factory[RWAFactory <br/> CREATE2]
+        KYC[KYCPassport <br/> ERC-721 Soulbound]
+        Token[RWAToken <br/> ERC20Votes/Permit]
+    end
+
+    subgraph Upgradability
+        Proxy[AssetManager Proxy <br/> ERC1967]
+        ImplV1[AssetManager V1]
+        ImplV2[AssetManager V2]
+    end
+
+    subgraph DeFi Primitives
+        AMM[RWAAMM Pool <br/> x*y=k]
+        Vault[RWAVault <br/> ERC-4626]
+    end
+
+    subgraph Oracles
+        OracleAdapter[RWAOracle Adapter]
+        Chainlink[Chainlink Aggregators]
+    end
+
+    Factory -.->|Deploys| Token
+    Factory -.->|Deploys| AMM
+    Factory -.->|Deploys| Vault
+    
+    Proxy -->|Delegates Calls| ImplV1
+    Proxy -.->|Upgrades To| ImplV2
+    
+    AMM -->|Reads Price| OracleAdapter
+    OracleAdapter -->|Fetches Data| Chainlink
+```
+
+## 4. Sequence Diagrams (Critical User Flows)
+Below are the sequence diagrams for the three most critical protocol operations.
+
+### Flow 1: Token Swap in AMM (x * y = k)
+```mermaid
+sequenceDiagram
+    actor User
+    participant AMM as RWAAMM
+    participant Token0 as USDC
+    participant Token1 as RWAToken
+
+    User->>Token0: approve(AMM, amountIn)
+    User->>AMM: swap(Token0, amountIn)
+    activate AMM
+    AMM->>Token0: safeTransferFrom(User, AMM, amountIn)
+    note right of AMM: Calculate out = (reserveOut * amountIn * 997) / (reserveIn * 1000 + amountIn * 997)
+    AMM->>Token1: safeTransfer(User, amountOut)
+    AMM-->>User: emit Swap()
+    deactivate AMM
+```
+
+
+### Flow 2: Yield Vault Deposit (ERC-4626)
+```mermaid
+sequenceDiagram
+    actor User
+    participant Vault as RWAVault
+    participant Asset as RWAToken
+
+    User->>Asset: approve(Vault, assets)
+    User->>Vault: deposit(assets, User)
+    activate Vault
+    note right of Vault: Calculate shares incorporating _decimalsOffset() to prevent inflation attack
+    Vault->>Asset: safeTransferFrom(User, Vault, assets)
+    Vault->>Vault: _mint(User, shares)
+    Vault-->>User: return shares
+    deactivate Vault
+```
+
+### Flow 3: DAO Upgrade Flow (UUPS Proxy)
+```mermaid
+sequenceDiagram
+    actor Proposer
+    participant Gov as Governor
+    participant Time as Timelock
+    participant Proxy as AssetManagerProxy
+
+    Proposer->>Gov: propose(upgradeToAndCall(V2))
+    note over Gov: 1 week voting period
+    Gov->>Gov: State changes to Succeeded
+    Proposer->>Gov: queue(proposal)
+    Gov->>Time: schedule operation
+    note over Time: 2 days mandatory delay
+    Proposer->>Gov: execute(proposal)
+    Gov->>Time: execute
+    Time->>Proxy: upgradeToAndCall(V2)
+```
+
+
+## 5. Storage Layout & Data Model
+Managing storage correctly is critical for the `AssetManager` UUPS Proxy to prevent storage collisions during V1 -> V2 upgrades.
+
+|**Slot**|**Type**|**Variable Name**|**Description**|
+|---|---|---|---|
+|`0`|`address`|`owner`|Admin address (Inherited from OwnableUpgradeable)|
+|`1`|`uint256`|`totalAssetsManaged`|Tracks total RWA volume|
+|`2`|`mapping`|`whitelistedIssuers`|KYC'd asset issuers|
+
+**AssetManagerV2 Storage (Upgrade Path):**
+
+|**Slot**|**Type**|**Variable Name**|**Description**|
+|---|---|---|---|
+|`0`|`address`|`owner`|Must remain at Slot 0|
+|`1`|`uint256`|`totalAssetsManaged`|Must remain at Slot 1|
+|`2`|`mapping`|`whitelistedIssuers`|Must remain at Slot 2|
+|`3`|`uint256`|`platformFee`|**NEW IN V2:** Appended to avoid collisions|
+_Safety Check:_ No variables were deleted or reordered. New state variables are strictly appended to the end of the layout.
+
+## 6. Trust Assumptions & Role Management
+The protocol relies on several trust assumptions and strictly defined roles to minimize centralization vectors.
+
+- **Upgrades (`UPGRADER_ROLE`):** Held exclusively by the `TimelockController`. No single EOA (Externally Owned Account) can upgrade the proxy.
+    
+- **Minting (`MINTER_ROLE`):** Held by the Factory and the DAO. Users can only mint if they have passed the KYC process and hold the `KYCPassport` NFT.
+    
+- **Oracle Integrity:** We assume Chainlink node operators behave honestly. However, we mitigate stale data by hardcoding a `1 hours` timeout.
+    
+- **Multisig Compromise:** If the DAO governance is bypassed, the 2-day Timelock delay provides a "circuit breaker" window for users to withdraw their liquidity (`removeLiquidity`) and exit the Vault before a malicious upgrade executes.
+
+
+## 7. Architecture Decision Records (ADRs)
+### ADR-01: Upgradability Pattern
+
+- **Context:** The core `AssetManager` requires future updates.
+    
+- **Decision:** Implement **UUPS (Universal Upgradeable Proxy Standard)** instead of Transparent Proxy.
+    
+- **Consequences:** Gas costs for deployment and user interactions are cheaper. The upgrade logic resides in the implementation, requiring careful attention to avoid bricking the contract (ensured by OpenZeppelin's `_authorizeUpgrade`).
+    
+
+### ADR-02: Inflation Attack Mitigation in Yield Vault
+
+- **Context:** ERC-4626 Vaults are susceptible to the "first depositor" (donation) attack, where an attacker manipulates the share price by sending raw assets to the contract.
+    
+- **Decision:** Override `_decimalsOffset()` to return `3`.
+    
+- **Consequences:** The vault creates 10^3 virtual assets and shares. It mathematically forces attackers to spend an exponentially larger, economically unviable amount of capital to execute the donation attack.
+    
+
+### ADR-03: AMM Math Optimization
+
+- **Context:** Calculating the initial liquidity shares requires a square root function `sqrt(x * y)`. Pure Solidity implementations are gas-intensive.
+    
+- **Decision:** Implement the Babylonian square root method using **Inline Yul Assembly**.
+    
+- **Consequences:** Readability is slightly reduced, but gas consumption during pool initialization is drastically optimized.
+
+
+
