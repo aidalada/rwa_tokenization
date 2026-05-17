@@ -11,13 +11,13 @@ env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-  check:
-    name: Foundry project
+  build-and-test:
+    name: Build, lint, test, coverage
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
           submodules: recursive
@@ -25,14 +25,57 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
-      - name: Show Forge version
+      - name: Forge version
         run: forge --version
 
-      - name: Run Forge fmt
+      - name: Check formatting
         run: forge fmt --check
 
-      - name: Run Forge build
+      - name: Build
         run: forge build --sizes
 
-      - name: Run Forge tests
-        run: forge test -vvv
+      - name: Run tests (unit + fuzz + invariant)
+        run: forge test -vvv --no-match-contract ForkTest
+
+      - name: Run fork tests
+        run: |
+          RPC="${{ secrets.ETH_RPC_URL }}"
+          if [ -n "$RPC" ]; then
+            forge test --match-contract ForkTest --fork-url "$RPC" -vvv
+          else
+            echo "ETH_RPC_URL secret not configured — skipping fork tests"
+          fi
+
+      - name: Coverage report
+        run: |
+          forge coverage --no-match-contract ForkTest --report summary 2>&1 | tee coverage_summary.txt
+          cat coverage_summary.txt
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage_summary.txt
+
+  slither:
+    name: Slither static analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Build
+        run: forge build
+
+      - name: Run Slither
+        uses: crytic/slither-action@v0.4.1
+        with:
+          target: 'src/'
+          slither-args: '--exclude-dependencies --filter-paths "lib/,src/mocks/" --fail-on high --fail-on medium'

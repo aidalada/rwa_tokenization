@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {Test, console} from "forge-std/Test.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {ChainlinkPriceOracle} from "../src/ChainlinkPriceOracle.sol";
 import {RWAYieldVault} from "../src/RWAYieldVault.sol";
@@ -15,45 +16,32 @@ import {MockERC20} from "../src/mocks/MockERC20.sol";
  * Run with:
  *   forge test --match-contract ForkTest --fork-url $ETH_RPC_URL -vvv
  *
- * Or for Sepolia:
- *   forge test --match-contract ForkTest --fork-url $SEPOLIA_RPC_URL -vvv
- *
- * Chainlink ETH/USD feed on Ethereum mainnet:
- *   0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419
- *
- * Chainlink ETH/USD feed on Sepolia:
- *   0x694AA1769357215DE4FAC081bf1f309aDC325306
+ * Chainlink ETH/USD (mainnet): 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419
+ * USDC (mainnet):              0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
  */
 contract ForkTest is Test {
-    // =========================================================================
-    // Mainnet Chainlink ETH/USD
-    // =========================================================================
+    address constant CHAINLINK_ETH_USD = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
+    address constant USDC              = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address constant USDC_WHALE        = 0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503;
 
-    address constant CHAINLINK_ETH_USD_MAINNET = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
+    string constant RPC = "ETH_RPC_URL";
 
     // =========================================================================
-    // Fork 1: Real Chainlink price feed returns valid, fresh price
+    // Fork 1: Real Chainlink feed returns valid, fresh price
     // =========================================================================
 
     /**
-     * @notice Fork mainnet and verify our oracle wrapper handles a real feed.
-     * @dev Validates that:
-     *      - The feed returns a positive price.
-     *      - The price is within a reasonable range ($100–$100,000 for ETH).
-     *      - Our staleness guard accepts a fresh live price.
+     * @notice Верифицируем что наш OracleAdapter корректно читает реальный
+     *         Chainlink ETH/USD feed: цена разумная, staleness не срабатывает.
      */
     function test_Fork_Chainlink_RealFeed_ValidPrice() public {
-        // Fork from mainnet at a known recent block
-        uint256 mainnetFork = vm.createFork(vm.envOr("ETH_RPC_URL", string("https://eth.llamarpc.com")));
-        vm.selectFork(mainnetFork);
+        vm.createSelectFork(vm.envOr(RPC, string("https://eth.llamarpc.com")));
 
         address admin = makeAddr("admin");
-
-        // Wrap the real Chainlink ETH/USD feed
         ChainlinkPriceOracle oracle = new ChainlinkPriceOracle(
-            CHAINLINK_ETH_USD_MAINNET,
-            address(0), // no PoR on mainnet for this test
-            3600,       // 1 hour staleness
+            CHAINLINK_ETH_USD,
+            address(0), // PoR не нужен для этого теста
+            3600,       // 1 час staleness
             admin
         );
 
@@ -61,98 +49,87 @@ contract ForkTest is Test {
 
         console.log("ETH/USD price (18 dec):", price);
         console.log("Updated at:", updatedAt);
+        console.log("Age (sec):", block.timestamp - updatedAt);
 
-        // Sanity: ETH price should be between $100 and $100,000
-        assertGt(price, 100e18, "Fork-1: price too low");
-        assertLt(price, 100_000e18, "Fork-1: price too high");
-
-        // updatedAt must be recent (within 1 hour of current block)
-        assertGt(updatedAt, block.timestamp - 3600, "Fork-1: price is stale on mainnet");
+        assertGt(price, 100e18,       "Fork-1: price < $100");
+        assertLt(price, 100_000e18,   "Fork-1: price > $100k");
+        assertGt(updatedAt, block.timestamp - 3600, "Fork-1: price stale on mainnet");
     }
 
     // =========================================================================
-    // Fork 2: Vault integrates with a real ERC-20 on mainnet (USDC-like)
+    // Fork 2: Staleness guard reverts after time warp
     // =========================================================================
 
-    // USDC on mainnet (6 decimals, well-established)
-    address constant USDC_MAINNET = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    /**
+     * @notice Мотаем время вперёд — staleness check должен сработать.
+     */
+    function test_Fork_Oracle_StalenessGuard_Reverts_AfterTimeWarp() public {
+        vm.createSelectFork(vm.envOr(RPC, string("https://eth.llamarpc.com")));
+
+        address admin = makeAddr("admin");
+        ChainlinkPriceOracle oracle = new ChainlinkPriceOracle(
+            CHAINLINK_ETH_USD,
+            address(0),
+            60, // 60 сек threshold
+            admin
+        );
+
+        // Сначала работает
+        (uint256 price,) = oracle.getPrice();
+        assertGt(price, 0);
+
+        // Мотаем время на 1 час — feed "устаревает"
+        vm.warp(block.timestamp + 3601);
+
+        vm.expectRevert();
+        oracle.getPrice();
+    }
+
+    // =========================================================================
+    // Fork 3: Vault + real USDC deposit/redeem round-trip
+    // =========================================================================
 
     /**
-     * @notice Fork mainnet, deploy our Vault with real USDC as underlying,
-     *         and verify deposit/redeem round-trips correctly.
-     * @dev Uses vm.deal + deal (token gift) to fund a test user with USDC.
+     * @notice Деплоим RWAYieldVault с реальным USDC как underlying.
+     *         Проверяем ERC-4626 round-trip и совместимость с 6-decimal токеном.
      */
     function test_Fork_Vault_WithRealUSDC() public {
-        uint256 mainnetFork = vm.createFork(vm.envOr("ETH_RPC_URL", string("https://eth.llamarpc.com")));
-        vm.selectFork(mainnetFork);
+        vm.createSelectFork(vm.envOr(RPC, string("https://eth.llamarpc.com")));
 
         address admin = makeAddr("admin");
         address alice = makeAddr("alice");
 
-        // Give alice 10,000 USDC using foundry's deal cheatcode
-        deal(USDC_MAINNET, alice, 10_000e6);
+        // Даём alice 10,000 USDC через foundry deal
+        deal(USDC, alice, 10_000e6);
 
-        // Deploy vault with real USDC as underlying
-        // Note: USDC is 6 decimals — vault handles arbitrary decimals
-        import_IERC20 usdc = import_IERC20(USDC_MAINNET);
         RWAYieldVault vault = new RWAYieldVault(
-            usdc,
+            IERC20(USDC),
             admin,
             1_000_000e6 // 1M USDC cap
         );
 
-        uint256 depositAmount = 1000e6; // 1000 USDC
+        uint256 depositAmount = 1_000e6; // 1000 USDC
 
+        // Deposit
         vm.startPrank(alice);
-        usdc.approve(address(vault), depositAmount);
+        IERC20(USDC).approve(address(vault), depositAmount);
+        uint256 previewShares = vault.previewDeposit(depositAmount);
         uint256 shares = vault.deposit(depositAmount, alice);
         vm.stopPrank();
 
-        assertGt(shares, 0, "Fork-2: no shares minted");
-        assertEq(vault.totalAssets(), depositAmount, "Fork-2: totalAssets mismatch");
+        console.log("Deposited USDC:", depositAmount / 1e6);
+        console.log("Shares received:", shares);
+
+        assertGt(shares, 0,               "Fork-3: no shares minted");
+        assertLe(shares, previewShares + 1, "Fork-3: ERC-4626 preview mismatch");
+        assertEq(vault.totalAssets(), depositAmount, "Fork-3: totalAssets mismatch");
 
         // Redeem
         vm.startPrank(alice);
         uint256 assetsBack = vault.redeem(shares, alice, alice);
         vm.stopPrank();
 
-        // Should get back approx depositAmount (rounding ≤ 1 unit)
-        assertApproxEqAbs(assetsBack, depositAmount, 1, "Fork-2: round-trip loss too large");
+        console.log("Assets back:", assetsBack / 1e6, "USDC");
+        assertApproxEqAbs(assetsBack, depositAmount, 1, "Fork-3: round-trip loss > 1 unit");
     }
-
-    // =========================================================================
-    // Fork 3: Oracle staleness guard works against a real feed with warp
-    // =========================================================================
-
-    /**
-     * @notice Fork mainnet, warp time forward beyond staleness threshold,
-     *         confirm our oracle reverts with StalePrice.
-     */
-    function test_Fork_Oracle_StalenessGuard_Reverts_AfterTimeWarp() public {
-        uint256 mainnetFork = vm.createFork(vm.envOr("ETH_RPC_URL", string("https://eth.llamarpc.com")));
-        vm.selectFork(mainnetFork);
-
-        address admin = makeAddr("admin");
-
-        // Short staleness: 60 seconds
-        ChainlinkPriceOracle oracle = new ChainlinkPriceOracle(
-            CHAINLINK_ETH_USD_MAINNET,
-            address(0),
-            60, // 60 second threshold
-            admin
-        );
-
-        // Warp forward 1 hour — price feed hasn't updated (forked state is frozen)
-        vm.warp(block.timestamp + 3601);
-
-        // Must revert due to staleness
-        vm.expectRevert();
-        oracle.getPrice();
-    }
-}
-
-// Minimal interface for fork tests
-interface import_IERC20 {
-    function approve(address, uint256) external returns (bool);
-    function balanceOf(address) external view returns (uint256);
 }
