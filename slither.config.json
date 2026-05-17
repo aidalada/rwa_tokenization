@@ -1,0 +1,4 @@
+{
+  "filter_paths": "lib|test|node_modules|frontend",
+  "fail_on": "medium"
+}
