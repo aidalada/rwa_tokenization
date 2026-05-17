@@ -26,13 +26,7 @@ contract GasBenchmarkTest is Test {
     }
 
     function test_GasBenchmark_Sqrt_Yul_vs_Solidity() public view {
-        uint256[5] memory inputs = [
-            uint256(0),
-            uint256(4),
-            uint256(1e18),
-            uint256(1e36),
-            uint256(type(uint128).max)
-        ];
+        uint256[5] memory inputs = [uint256(0), uint256(4), uint256(1e18), uint256(1e36), uint256(type(uint128).max)];
 
         for (uint256 i = 0; i < inputs.length; i++) {
             uint256 x = inputs[i];

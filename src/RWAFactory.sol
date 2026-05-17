@@ -20,14 +20,12 @@ contract RWAFactory is AccessControl {
 
     constructor(address defaultAdmin) {
         require(defaultAdmin != address(0), "RWAFactory: zero admin");
-        _grantRole(DEFAULT_ADMIN_ROLE,       defaultAdmin);
-        _grantRole(FACTORY_OPERATOR_ROLE,    defaultAdmin);
+        _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
+        _grantRole(FACTORY_OPERATOR_ROLE, defaultAdmin);
     }
 
     /// @notice Деплой через CREATE (адрес недетерминирован).
-    function deployWithCreate(address tokenAdmin)
-        external onlyRole(FACTORY_OPERATOR_ROLE) returns (address deployed)
-    {
+    function deployWithCreate(address tokenAdmin) external onlyRole(FACTORY_OPERATOR_ROLE) returns (address deployed) {
         require(tokenAdmin != address(0), "RWAFactory: zero tokenAdmin");
         RWAToken t = new RWAToken(tokenAdmin);
         deployed = address(t);
@@ -36,7 +34,9 @@ contract RWAFactory is AccessControl {
 
     /// @notice Деплой через CREATE2 (адрес детерминирован по salt).
     function deployWithCreate2(address tokenAdmin, bytes32 salt)
-        external onlyRole(FACTORY_OPERATOR_ROLE) returns (address deployed)
+        external
+        onlyRole(FACTORY_OPERATOR_ROLE)
+        returns (address deployed)
     {
         require(tokenAdmin != address(0), "RWAFactory: zero tokenAdmin");
         RWAToken t = new RWAToken{salt: salt}(tokenAdmin);
@@ -46,11 +46,7 @@ contract RWAFactory is AccessControl {
 
     /// @notice Предвычисление адреса CREATE2 до деплоя.
     function predictTokenAddress(address tokenAdmin, bytes32 salt) public view returns (address) {
-        bytes32 initHash = keccak256(
-            abi.encodePacked(type(RWAToken).creationCode, abi.encode(tokenAdmin))
-        );
-        return address(uint160(uint256(keccak256(
-            abi.encodePacked(bytes1(0xff), address(this), salt, initHash)
-        ))));
+        bytes32 initHash = keccak256(abi.encodePacked(type(RWAToken).creationCode, abi.encode(tokenAdmin)));
+        return address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, initHash)))));
     }
 }

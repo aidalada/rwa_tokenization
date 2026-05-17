@@ -18,7 +18,7 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 contract AssetManagerV1 is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
-    address public rwaToken;    // slot 50
+    address public rwaToken; // slot 50
     address public kycPassport; // slot 51
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -26,20 +26,18 @@ contract AssetManagerV1 is Initializable, AccessControlUpgradeable, UUPSUpgradea
         _disableInitializers();
     }
 
-    function initialize(address defaultAdmin, address _rwaToken, address _kycPassport)
-        public initializer
-    {
-        require(defaultAdmin  != address(0), "AssetManager: zero admin");
-        require(_rwaToken     != address(0), "AssetManager: zero rwaToken");
-        require(_kycPassport  != address(0), "AssetManager: zero kycPassport");
+    function initialize(address defaultAdmin, address _rwaToken, address _kycPassport) public initializer {
+        require(defaultAdmin != address(0), "AssetManager: zero admin");
+        require(_rwaToken != address(0), "AssetManager: zero rwaToken");
+        require(_kycPassport != address(0), "AssetManager: zero kycPassport");
 
         __AccessControl_init();
         __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
-        _grantRole(UPGRADER_ROLE,      defaultAdmin);
+        _grantRole(UPGRADER_ROLE, defaultAdmin);
 
-        rwaToken    = _rwaToken;
+        rwaToken = _rwaToken;
         kycPassport = _kycPassport;
     }
 

@@ -64,8 +64,7 @@ contract AMMHandler is Test {
         vm.startPrank(actor);
         address tokenIn = zeroForOne ? address(token0) : address(token1);
         MockERC20(tokenIn).approve(address(amm), amountIn);
-        try amm.swap(tokenIn, amountIn, 0) {}
-        catch {}
+        try amm.swap(tokenIn, amountIn, 0) {} catch {}
         vm.stopPrank();
     }
 
@@ -206,16 +205,8 @@ contract InvariantTest is StdInvariant, Test {
         uint256 actualBal0 = token0.balanceOf(address(amm));
         uint256 actualBal1 = token1.balanceOf(address(amm));
 
-        assertEq(
-            amm.reserve0(),
-            actualBal0,
-            "INV-2: reserve0 != actual token0 balance"
-        );
-        assertEq(
-            amm.reserve1(),
-            actualBal1,
-            "INV-2: reserve1 != actual token1 balance"
-        );
+        assertEq(amm.reserve0(), actualBal0, "INV-2: reserve0 != actual token0 balance");
+        assertEq(amm.reserve1(), actualBal1, "INV-2: reserve1 != actual token1 balance");
     }
 
     // =========================================================================
@@ -224,11 +215,7 @@ contract InvariantTest is StdInvariant, Test {
 
     function invariant_Vault_TotalAssets_MatchBalance() public view {
         uint256 vaultBal = token0.balanceOf(address(vault));
-        assertEq(
-            vault.totalAssets(),
-            vaultBal,
-            "INV-3: vault.totalAssets() != actual balance"
-        );
+        assertEq(vault.totalAssets(), vaultBal, "INV-3: vault.totalAssets() != actual balance");
     }
 
     // =========================================================================
@@ -239,11 +226,7 @@ contract InvariantTest is StdInvariant, Test {
         if (vault.totalSupply() == 0) {
             // If no shares exist, no assets should be locked
             // (Some rounding dust may remain, allow up to 1 unit)
-            assertLe(
-                vault.totalAssets(),
-                1,
-                "INV-4: shares=0 but assets>1"
-            );
+            assertLe(vault.totalAssets(), 1, "INV-4: shares=0 but assets>1");
         }
     }
 
@@ -259,10 +242,6 @@ contract InvariantTest is StdInvariant, Test {
             address actor = makeAddr(string(abi.encodePacked("actor", i)));
             sumBalances += amm.balanceOf(actor);
         }
-        assertEq(
-            amm.totalSupply(),
-            sumBalances,
-            "INV-5: LP totalSupply != sum of balances"
-        );
+        assertEq(amm.totalSupply(), sumBalances, "INV-5: LP totalSupply != sum of balances");
     }
 }

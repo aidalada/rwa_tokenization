@@ -25,7 +25,7 @@ contract RWAAMM is ERC20, ReentrancyGuard, AccessControl, Pausable {
 
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
-    uint256 public constant FEE_NUMERATOR   = 3;
+    uint256 public constant FEE_NUMERATOR = 3;
     uint256 public constant FEE_DENOMINATOR = 1000;
     uint256 public constant MINIMUM_LIQUIDITY = 1000;
 
@@ -52,9 +52,7 @@ contract RWAAMM is ERC20, ReentrancyGuard, AccessControl, Pausable {
     // Constructor
     // =========================================================================
 
-    constructor(address _token0, address _token1, address _admin)
-        ERC20("RWA-AMM LP Token", "RWA-LP")
-    {
+    constructor(address _token0, address _token1, address _admin) ERC20("RWA-AMM LP Token", "RWA-LP") {
         require(_token0 != address(0) && _token1 != address(0), "AMM: zero address");
         require(_token0 != _token1, "AMM: identical tokens");
 
@@ -69,19 +67,24 @@ contract RWAAMM is ERC20, ReentrancyGuard, AccessControl, Pausable {
     // Pausable
     // =========================================================================
 
-    function pause()   external onlyRole(PAUSER_ROLE) { _pause(); }
-    function unpause() external onlyRole(PAUSER_ROLE) { _unpause(); }
+    function pause() external onlyRole(PAUSER_ROLE) {
+        _pause();
+    }
+
+    function unpause() external onlyRole(PAUSER_ROLE) {
+        _unpause();
+    }
 
     // =========================================================================
     // Core: Add Liquidity
     // =========================================================================
 
-    function addLiquidity(
-        uint256 amount0Desired,
-        uint256 amount1Desired,
-        uint256 amount0Min,
-        uint256 amount1Min
-    ) external nonReentrant whenNotPaused returns (uint256 lpMinted) {
+    function addLiquidity(uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256 lpMinted)
+    {
         // --- CHECKS ---
         require(amount0Desired > 0 && amount1Desired > 0, "AMM: zero amount");
 
@@ -133,11 +136,12 @@ contract RWAAMM is ERC20, ReentrancyGuard, AccessControl, Pausable {
     // Core: Remove Liquidity
     // =========================================================================
 
-    function removeLiquidity(
-        uint256 lpAmount,
-        uint256 amount0Min,
-        uint256 amount1Min
-    ) external nonReentrant whenNotPaused returns (uint256 amount0, uint256 amount1) {
+    function removeLiquidity(uint256 lpAmount, uint256 amount0Min, uint256 amount1Min)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256 amount0, uint256 amount1)
+    {
         // --- CHECKS ---
         require(lpAmount > 0, "AMM: zero LP amount");
 
@@ -166,20 +170,19 @@ contract RWAAMM is ERC20, ReentrancyGuard, AccessControl, Pausable {
     // Core: Swap
     // =========================================================================
 
-    function swap(
-        address tokenIn,
-        uint256 amountIn,
-        uint256 amountOutMin
-    ) external nonReentrant whenNotPaused returns (uint256 amountOut) {
+    function swap(address tokenIn, uint256 amountIn, uint256 amountOutMin)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256 amountOut)
+    {
         // --- CHECKS ---
         require(tokenIn == address(token0) || tokenIn == address(token1), "AMM: invalid tokenIn");
         require(amountIn > 0, "AMM: zero amountIn");
         require(reserve0 > 0 && reserve1 > 0, "AMM: no liquidity");
 
         bool isToken0In = tokenIn == address(token0);
-        (uint256 reserveIn, uint256 reserveOut) = isToken0In
-            ? (reserve0, reserve1)
-            : (reserve1, reserve0);
+        (uint256 reserveIn, uint256 reserveOut) = isToken0In ? (reserve0, reserve1) : (reserve1, reserve0);
 
         // 0.3% fee: multiply first to avoid divide-before-multiply
         uint256 amountInWithFee = amountIn * (FEE_DENOMINATOR - FEE_NUMERATOR);
@@ -213,14 +216,10 @@ contract RWAAMM is ERC20, ReentrancyGuard, AccessControl, Pausable {
     // View: Quote
     // =========================================================================
 
-    function getAmountOut(address tokenIn, uint256 amountIn)
-        external view returns (uint256 amountOut)
-    {
+    function getAmountOut(address tokenIn, uint256 amountIn) external view returns (uint256 amountOut) {
         require(tokenIn == address(token0) || tokenIn == address(token1), "AMM: invalid tokenIn");
         bool isToken0In = tokenIn == address(token0);
-        (uint256 reserveIn, uint256 reserveOut) = isToken0In
-            ? (reserve0, reserve1)
-            : (reserve1, reserve0);
+        (uint256 reserveIn, uint256 reserveOut) = isToken0In ? (reserve0, reserve1) : (reserve1, reserve0);
         uint256 amountInWithFee = amountIn * (FEE_DENOMINATOR - FEE_NUMERATOR);
         amountOut = (amountInWithFee * reserveOut) / ((reserveIn * FEE_DENOMINATOR) + amountInWithFee);
     }
@@ -254,16 +253,24 @@ contract RWAAMM is ERC20, ReentrancyGuard, AccessControl, Pausable {
         if (y > 3) {
             z = y;
             uint256 x = y / 2 + 1;
-            while (x < z) { z = x; x = (y / x + x) / 2; }
+            while (x < z) z = x;
+            x = (y / x + x) / 2;
         } else if (y != 0) {
             z = 1;
         }
     }
 
     /// @notice Public wrappers for gas benchmarking tests
-    function sqrtYul(uint256 y) external pure returns (uint256) { return _sqrt(y); }
-    function sqrtSolidity(uint256 y) external pure returns (uint256) { return _sqrtSolidity(y); }
+    function sqrtYul(uint256 y) external pure returns (uint256) {
+        return _sqrt(y);
+    }
+
+    function sqrtSolidity(uint256 y) external pure returns (uint256) {
+        return _sqrtSolidity(y);
+    }
 
     /// @notice Returns k = reserve0 * reserve1. Used in invariant tests.
-    function getK() external view returns (uint256) { return reserve0 * reserve1; }
+    function getK() external view returns (uint256) {
+        return reserve0 * reserve1;
+    }
 }

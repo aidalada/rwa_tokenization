@@ -67,15 +67,10 @@ contract DeFiCoreTest is Test {
 
         // Deploy oracle mocks (8 decimal like Chainlink)
         priceFeed = new MockAggregator(8, 100e8); // RWA = $100
-        porFeed = new MockAggregator(8, 100e8);   // PoR = $100
+        porFeed = new MockAggregator(8, 100e8); // PoR = $100
 
         // Deploy oracle adapter
-        oracle = new ChainlinkPriceOracle(
-            address(priceFeed),
-            address(porFeed),
-            STALENESS,
-            admin
-        );
+        oracle = new ChainlinkPriceOracle(address(priceFeed), address(porFeed), STALENESS, admin);
 
         vm.stopPrank();
 
@@ -433,7 +428,7 @@ contract DeFiCoreTest is Test {
     // =========================================================================
 
     function test_Oracle_GetPrice_Valid() public view {
-        (uint256 price, ) = oracle.getPrice();
+        (uint256 price,) = oracle.getPrice();
         // Feed: 100e8 (8 dec) → normalized to 18 dec = 100e18
         assertEq(price, 100e18);
     }
@@ -466,7 +461,7 @@ contract DeFiCoreTest is Test {
     }
 
     function test_Oracle_GetProofOfReserve() public view {
-        (uint256 reserve, ) = oracle.getProofOfReserve();
+        (uint256 reserve,) = oracle.getProofOfReserve();
         assertEq(reserve, 100e18);
     }
 
@@ -489,7 +484,7 @@ contract DeFiCoreTest is Test {
         vm.prank(admin);
         oracle.setPriceFeed(address(newFeed));
 
-        (uint256 price, ) = oracle.getPrice();
+        (uint256 price,) = oracle.getPrice();
         assertEq(price, 200e18);
     }
 
@@ -516,7 +511,7 @@ contract DeFiCoreTest is Test {
         MockAggregator feed8 = new MockAggregator(8, 1234e8);
         vm.prank(admin);
         oracle.setPriceFeed(address(feed8));
-        (uint256 price, ) = oracle.getPrice();
+        (uint256 price,) = oracle.getPrice();
         assertEq(price, 1234e18);
     }
 
@@ -525,18 +520,13 @@ contract DeFiCoreTest is Test {
         MockAggregator feed6 = new MockAggregator(6, 1234e6);
         vm.prank(admin);
         oracle.setPriceFeed(address(feed6));
-        (uint256 price, ) = oracle.getPrice();
+        (uint256 price,) = oracle.getPrice();
         assertEq(price, 1234e18);
     }
 
     function test_Oracle_PoRFeed_NotSet_Reverts() public {
         // Deploy oracle with no PoR feed
-        ChainlinkPriceOracle oracleNoPoR = new ChainlinkPriceOracle(
-            address(priceFeed),
-            address(0),
-            STALENESS,
-            admin
-        );
+        ChainlinkPriceOracle oracleNoPoR = new ChainlinkPriceOracle(address(priceFeed), address(0), STALENESS, admin);
         vm.expectRevert("Oracle: PoR feed not set");
         oracleNoPoR.getProofOfReserve();
     }
@@ -609,7 +599,7 @@ contract DeFiCoreTest is Test {
     function testFuzz_Oracle_ValidPrice(int256 rawPrice) public {
         vm.assume(rawPrice > 0);
         priceFeed.setAnswer(rawPrice);
-        (uint256 price, ) = oracle.getPrice();
+        (uint256 price,) = oracle.getPrice();
         assertGt(price, 0);
     }
 

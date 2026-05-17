@@ -9,13 +9,7 @@ interface AggregatorV3Interface {
     function latestRoundData()
         external
         view
-        returns (
-            uint80 roundId,
-            int256 answer,
-            uint256 startedAt,
-            uint256 updatedAt,
-            uint80 answeredInRound
-        );
+        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
 }
 
 /**
@@ -71,12 +65,7 @@ contract ChainlinkPriceOracle is AccessControl {
     // Constructor
     // =========================================================================
 
-    constructor(
-        address _priceFeed,
-        address _porFeed,
-        uint256 _stalenessThreshold,
-        address _admin
-    ) {
+    constructor(address _priceFeed, address _porFeed, uint256 _stalenessThreshold, address _admin) {
         if (_priceFeed == address(0) || _admin == address(0)) revert ZeroAddress();
 
         priceFeed = AggregatorV3Interface(_priceFeed);
@@ -138,14 +127,10 @@ contract ChainlinkPriceOracle is AccessControl {
      * @return reserve    Proof of Reserve (18 dec).
      * @return isCollateralised  True if reserve >= price (1:1 backing).
      */
-    function getPriceAndReserve()
-        external
-        view
-        returns (uint256 price, uint256 reserve, bool isCollateralised)
-    {
-        (price, ) = _getValidatedPrice(priceFeed);
+    function getPriceAndReserve() external view returns (uint256 price, uint256 reserve, bool isCollateralised) {
+        (price,) = _getValidatedPrice(priceFeed);
         if (address(porFeed) != address(0)) {
-            (reserve, ) = _getValidatedPrice(porFeed);
+            (reserve,) = _getValidatedPrice(porFeed);
             isCollateralised = reserve >= price;
         }
     }
@@ -161,18 +146,8 @@ contract ChainlinkPriceOracle is AccessControl {
      *      3. answeredInRound >= roundId (round is complete)
      *      Returns price normalised to 18 decimals.
      */
-    function _getValidatedPrice(AggregatorV3Interface feed)
-        internal
-        view
-        returns (uint256 price18, uint256 updatedAt)
-    {
-        (
-            uint80 roundId,
-            int256 answer,
-            ,
-            uint256 _updatedAt,
-            uint80 answeredInRound
-        ) = feed.latestRoundData();
+    function _getValidatedPrice(AggregatorV3Interface feed) internal view returns (uint256 price18, uint256 updatedAt) {
+        (uint80 roundId, int256 answer,, uint256 _updatedAt, uint80 answeredInRound) = feed.latestRoundData();
 
         // Guard 1: valid answer
         if (answer <= 0) revert InvalidPrice(answer);

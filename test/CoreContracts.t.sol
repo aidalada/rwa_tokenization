@@ -17,29 +17,26 @@ import {AssetManagerV2} from "../src/AssetManagerV2.sol";
  *         Fuzz тесты: access control, votes, factory.
  */
 contract CoreContractsTest is Test {
-
-    RWAToken       public rwaToken;
-    KYCPassport    public kycPassport;
-    RWAFactory     public factory;
+    RWAToken public rwaToken;
+    KYCPassport public kycPassport;
+    RWAFactory public factory;
     AssetManagerV1 public proxyManager;
 
-    address public admin   = makeAddr("admin");
-    address public alice   = makeAddr("alice");
-    address public bob     = makeAddr("bob");
+    address public admin = makeAddr("admin");
+    address public alice = makeAddr("alice");
+    address public bob = makeAddr("bob");
     address public charlie = makeAddr("charlie");
 
     function setUp() public {
         vm.startPrank(admin);
 
-        rwaToken    = new RWAToken(admin);
+        rwaToken = new RWAToken(admin);
         kycPassport = new KYCPassport(admin);
-        factory     = new RWAFactory(admin); // ИСПРАВЛЕНО: передаём admin
+        factory = new RWAFactory(admin); // ИСПРАВЛЕНО: передаём admin
 
         AssetManagerV1 impl = new AssetManagerV1();
-        bytes memory initData = abi.encodeWithSelector(
-            AssetManagerV1.initialize.selector,
-            admin, address(rwaToken), address(kycPassport)
-        );
+        bytes memory initData =
+            abi.encodeWithSelector(AssetManagerV1.initialize.selector, admin, address(rwaToken), address(kycPassport));
         proxyManager = AssetManagerV1(address(new ERC1967Proxy(address(impl), initData)));
 
         vm.stopPrank();
@@ -116,8 +113,10 @@ contract CoreContractsTest is Test {
     function test_Token_Unpause_AllowsTransfer() public {
         vm.prank(admin);
         rwaToken.mint(alice, 1000e18);
-        vm.prank(admin); rwaToken.pause();
-        vm.prank(admin); rwaToken.unpause();
+        vm.prank(admin);
+        rwaToken.pause();
+        vm.prank(admin);
+        rwaToken.unpause();
         assertFalse(rwaToken.paused());
         vm.prank(alice);
         rwaToken.transfer(bob, 100e18);
@@ -393,7 +392,9 @@ contract CoreContractsTest is Test {
         vm.expectRevert("AssetManager: zero admin");
         new ERC1967Proxy(
             address(impl),
-            abi.encodeWithSelector(AssetManagerV1.initialize.selector, address(0), address(rwaToken), address(kycPassport))
+            abi.encodeWithSelector(
+                AssetManagerV1.initialize.selector, address(0), address(rwaToken), address(kycPassport)
+            )
         );
     }
 
@@ -441,16 +442,22 @@ contract CoreContractsTest is Test {
     // =========================================================================
 
     function _permitDigest(
-        address token, address owner, address spender,
-        uint256 value, uint256 nonce, uint256 deadline
+        address token,
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 nonce,
+        uint256 deadline
     ) internal view returns (bytes32) {
         bytes32 PERMIT_TYPEHASH = keccak256(
             "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
         );
-        return keccak256(abi.encodePacked(
-            "\x19\x01",
-            RWAToken(token).DOMAIN_SEPARATOR(),
-            keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonce, deadline))
-        ));
+        return keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                RWAToken(token).DOMAIN_SEPARATOR(),
+                keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonce, deadline))
+            )
+        );
     }
 }

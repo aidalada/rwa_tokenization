@@ -21,8 +21,8 @@ import {MockERC20} from "../src/mocks/MockERC20.sol";
  */
 contract ForkTest is Test {
     address constant CHAINLINK_ETH_USD = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
-    address constant USDC              = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address constant USDC_WHALE        = 0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503;
+    address constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address constant USDC_WHALE = 0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503;
 
     string constant RPC = "ETH_RPC_URL";
 
@@ -41,7 +41,7 @@ contract ForkTest is Test {
         ChainlinkPriceOracle oracle = new ChainlinkPriceOracle(
             CHAINLINK_ETH_USD,
             address(0), // PoR не нужен для этого теста
-            3600,       // 1 час staleness
+            3600, // 1 час staleness
             admin
         );
 
@@ -51,8 +51,8 @@ contract ForkTest is Test {
         console.log("Updated at:", updatedAt);
         console.log("Age (sec):", block.timestamp - updatedAt);
 
-        assertGt(price, 100e18,       "Fork-1: price < $100");
-        assertLt(price, 100_000e18,   "Fork-1: price > $100k");
+        assertGt(price, 100e18, "Fork-1: price < $100");
+        assertLt(price, 100_000e18, "Fork-1: price > $100k");
         assertGt(updatedAt, block.timestamp - 3600, "Fork-1: price stale on mainnet");
     }
 
@@ -120,7 +120,7 @@ contract ForkTest is Test {
         console.log("Deposited USDC:", depositAmount / 1e6);
         console.log("Shares received:", shares);
 
-        assertGt(shares, 0,               "Fork-3: no shares minted");
+        assertGt(shares, 0, "Fork-3: no shares minted");
         assertLe(shares, previewShares + 1, "Fork-3: ERC-4626 preview mismatch");
         assertEq(vault.totalAssets(), depositAmount, "Fork-3: totalAssets mismatch");
 

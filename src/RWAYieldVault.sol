@@ -33,7 +33,7 @@ contract RWAYieldVault is ERC4626, AccessControl, Pausable, ReentrancyGuard {
     // =========================================================================
 
     bytes32 public constant YIELD_MANAGER_ROLE = keccak256("YIELD_MANAGER_ROLE");
-    bytes32 public constant PAUSER_ROLE        = keccak256("PAUSER_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     // =========================================================================
     // State
@@ -61,11 +61,11 @@ contract RWAYieldVault is ERC4626, AccessControl, Pausable, ReentrancyGuard {
         ERC20("RWA Yield Vault Share", "vRWA")
     {
         require(_admin != address(0), "Vault: zero admin");
-        require(_depositCap > 0,      "Vault: zero cap");
+        require(_depositCap > 0, "Vault: zero cap");
 
-        _grantRole(DEFAULT_ADMIN_ROLE,  _admin);
-        _grantRole(YIELD_MANAGER_ROLE,  _admin);
-        _grantRole(PAUSER_ROLE,         _admin);
+        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+        _grantRole(YIELD_MANAGER_ROLE, _admin);
+        _grantRole(PAUSER_ROLE, _admin);
 
         depositCap = _depositCap;
     }
@@ -88,8 +88,13 @@ contract RWAYieldVault is ERC4626, AccessControl, Pausable, ReentrancyGuard {
     // Admin
     // =========================================================================
 
-    function pause()   external onlyRole(PAUSER_ROLE) { _pause(); }
-    function unpause() external onlyRole(PAUSER_ROLE) { _unpause(); }
+    function pause() external onlyRole(PAUSER_ROLE) {
+        _pause();
+    }
+
+    function unpause() external onlyRole(PAUSER_ROLE) {
+        _unpause();
+    }
 
     /**
      * @notice Inject yield. Increases totalAssets() → share price rises.
@@ -127,26 +132,30 @@ contract RWAYieldVault is ERC4626, AccessControl, Pausable, ReentrancyGuard {
     // ERC-4626 overrides — add pause + reentrancy guards
     // =========================================================================
 
-    function deposit(uint256 assets, address receiver)
-        public override nonReentrant whenNotPaused returns (uint256)
-    {
+    function deposit(uint256 assets, address receiver) public override nonReentrant whenNotPaused returns (uint256) {
         return super.deposit(assets, receiver);
     }
 
-    function mint(uint256 shares, address receiver)
-        public override nonReentrant whenNotPaused returns (uint256)
-    {
+    function mint(uint256 shares, address receiver) public override nonReentrant whenNotPaused returns (uint256) {
         return super.mint(shares, receiver);
     }
 
     function withdraw(uint256 assets, address receiver, address owner_)
-        public override nonReentrant whenNotPaused returns (uint256)
+        public
+        override
+        nonReentrant
+        whenNotPaused
+        returns (uint256)
     {
         return super.withdraw(assets, receiver, owner_);
     }
 
     function redeem(uint256 shares, address receiver, address owner_)
-        public override nonReentrant whenNotPaused returns (uint256)
+        public
+        override
+        nonReentrant
+        whenNotPaused
+        returns (uint256)
     {
         return super.redeem(shares, receiver, owner_);
     }
@@ -155,9 +164,7 @@ contract RWAYieldVault is ERC4626, AccessControl, Pausable, ReentrancyGuard {
     // Interface support
     // =========================================================================
 
-    function supportsInterface(bytes4 interfaceId)
-        public view override(AccessControl) returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) public view override(AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 }
